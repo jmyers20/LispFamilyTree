@@ -1,0 +1,23 @@
+W ancestor Aaron
+Caleb
+Denise
+Ethel
+Fred
+Jerome
+Pauline
+
+X Pauline child Caleb
+No
+
+W child Fred
+Jerome
+Mabel
+
+X Fred unrelated Mabel
+No
+
+X Fred unrelated Aaron
+No
+
+
+End of File.

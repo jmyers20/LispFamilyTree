@@ -1,0 +1,36 @@
+X Amelia ancestor Annie
+Yes
+
+X Annie ancestor Amelia
+No
+
+W ancestor Annie
+Alberta
+Alex
+Alice
+Amelia
+Amy
+Andrew
+Authur
+Elmer
+Emma
+Erskin
+Ervin
+Esmerelda
+
+W ancestor Eamon
+Alberta
+Alex
+Alice
+Amelia
+Amy
+Andrew
+Authur
+Elmer
+Emma
+Erskin
+Ervin
+Esmerelda
+
+
+End of File.

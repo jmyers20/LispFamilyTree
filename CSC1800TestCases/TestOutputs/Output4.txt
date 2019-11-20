@@ -1,0 +1,22 @@
+W sibling Donald
+Daniel
+Denise
+
+W sibling Daniel
+Denise
+Donald
+
+X Daniel sibling Denise
+Yes
+
+X Denise sibling Daniel
+Yes
+
+X Donald sibling Daniel
+Yes
+
+X Donald sibling Denise
+Yes
+
+
+End of File.

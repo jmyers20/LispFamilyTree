@@ -1,0 +1,10 @@
+E Fred Ethel Mabel
+E Fred Ethel Jerome
+E Caleb Denise Pauline
+E Jerome Pauline Aaron
+E Pauline Carl Wendy
+W ancestor Aaron
+X Pauline child Caleb
+W child Fred
+X Fred unrelated Mabel
+X Fred unrelated Aaron

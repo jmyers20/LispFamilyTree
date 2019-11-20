@@ -1,0 +1,31 @@
+X Claudia cousin Claude
+Yes
+
+W cousin Claude
+Cammy
+Claudia
+Daniel
+Donald
+Maria
+
+W cousin Claudia
+Cammy
+Claude
+Daniel
+Donald
+Maria
+
+X Claude cousin Claudia
+Yes
+
+X Claude cousin Emma
+No
+
+X Emma cousin Claude
+No
+
+X David cousin Drusilla
+No
+
+
+End of File.
