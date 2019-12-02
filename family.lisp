@@ -1,6 +1,24 @@
 ;;;; -*- Mode: Lisp; -*- 
 ;;;; Team Members: Justin Myers, 
 
+;;;HELPFUL TOPLEVEL HINTS:
+
+;;; To run your program, first load it into the LispWorks Editor,
+;;; then click on the "Compile Buffer" button on the top of the
+;;; Editor window.  Then, in the LISTENER, you can call any of
+;;; the functions in the program file.
+
+;;; If you find yourself in an error, and you want to know how
+;;; you got to that point in the program, when the textual debugger
+;;; message appears, you can click on the "Debug" button at the
+;;; top of the LISTENER window.  You'll get a GUI debugger that
+;;; will show you things like the call stack, the values of the
+;;; local variables, and, if you click on a call stack entry,
+;;; if the entry corresponds to a function in your program, the
+;;; Editor will immediately jump you to the line of code where
+;;; the error occured.  Ask in class if you have trouble with
+;;; this neat feature. 
+
 ;;;HELPFUL PROGRAMMING HINTS:
 ;;; To create a person structure, use the automatically-generated
 ;;; function "make-person" as follows:
@@ -78,7 +96,6 @@ to see whether all the arguments are of the correct types."
 ;;; DEFINITIONS BELOW THIS COMMENT
 ;;;------------------------------------------------ 
 
-
 (DEFUN add-person (name struct tree)
   "This should enter the person structure in STRUCT into
 the hashtable in TREE with the key in NAME."
@@ -89,9 +106,8 @@ the hashtable in TREE with the key in NAME."
   (WHEN (NOT (OR (SYMBOLP name) (STRINGP name)))
     (ERROR "STORE-PERSON called with NAME (~A) that is not a SYMBOL or a STRING." name))
 
-    (setf (gethash name tree) name)
+    (setf (gethash name tree) struct)
        name)
-
 
 ;;This function needs to be defined by your team.
 (DEFUN ancestorsb (name tree)
@@ -102,10 +118,12 @@ exists as a person in the TREE!"
   (LET* ((p (lookup-person name tree))
          (parent1 (person-parent1 p))
          (parent2 (person-parent2 p)))
-    ;;body of function goes here.
-    ))
 
-
+    (when parent1
+      (append (list parent1 parent2)
+              (ancestorsb parent1 tree)
+              (ancestorsb parent2 tree)))
+  ))
 
 
 ;;NOTE: This function needs to be defined by team   
@@ -186,10 +204,14 @@ each line from the file opened in STREAM."
     ;; this last call should make test-tree return a list containing the following
     ;; in some arbitrary order when you call test-tree in the Listener:
     ;;   ("Karen" "Bill" "Fred" "Mary" "Zebulon" "Zenobia")
-    ;; (ancestors "Alex" tree)
+    (ancestors "Alex" tree)
 
-    ;(add-person 5 (make-person :name "Alex" :parent1 "Karen" :parent2 "Bill") tree)
-    (print (person-exists "Fred" tree))
-    (print (lookup-person "Fred" tree))
+    ;(print (person-exists "Alex" tree))
+    ;(print (person-parent1 (gethash "Alex" tree)))
+   
+    ;(print (lookup-person "Fred" tree))
+
+    ;(SETF p (make-person :name "Barbara" :parent1 "Fred" :parent2 "Carol"))
+    ;(print (person-parent1 p))
 
 ))
