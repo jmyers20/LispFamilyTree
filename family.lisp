@@ -79,10 +79,6 @@ to see whether all the arguments are of the correct types."
 ;;;------------------------------------------------ 
 
 
-
-
-
-
 (DEFUN add-person (name struct tree)
   "This should enter the person structure in STRUCT into
 the hashtable in TREE with the key in NAME."
@@ -95,7 +91,6 @@ the hashtable in TREE with the key in NAME."
 
     (setf (gethash name tree) name)
        name)
-
 
 
 ;;This function needs to be defined by your team.
