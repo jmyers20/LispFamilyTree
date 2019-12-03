@@ -22,7 +22,5 @@ E Alice Erskin Eamon
 E Erskin Alice Annie
 E Armond Bailley Kelly
 E Carter Denise Claudia
-X Amelia ancestor Annie
-X Annie ancestor Amelia
 W ancestor Annie
 W ancestor Eamon

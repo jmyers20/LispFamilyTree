@@ -1,46 +1,20 @@
 ;;;; -*- Mode: Lisp; -*- 
-;;;; Team Members: Justin Myers, 
-
-;;; HELPFUL PROGRAMMING HINTS:
-;;; To create a person structure, use the automatically-generated
-;;; function "make-person" as follows:
-;;;
-;;; (make-person :name xxx :parent1 yyy :parent2 zzz)
-;;;
-;;; where "xxx" is the string or symbol (or a variable holding it)
-;;; for the name of the person, "yyy" is the string or symbol for
-;;; the name of the person's first parent, and "zzz" is of course
-;;; the name of the person's second parent.
-;;;
-;;; for example, to store a new person in a variable p, use this:
-;;;
-;;; (SETF p (make-person :name "Barbara" :parent1 "Fred" :parent2 "Carol"))
-;;;
-;;; The DEFSTRUCT function tells Lisp to autmatically create
-;;; getter functions for each slot.  Their names are based on
-;;; the names of the slots:
-;;;
-;;;  "person-name" will get the value stored in the NAME slot
-;;;  "person-parent1" will get the value in the PARENT1 slot
-;;;  "person-parent2" will get the value in the PARENT2 slot
-
-;;;-------------------------------
-;;;PROJECT CODE STARTS HERE.
-;;;-------------------------------
+;;;; Team Members: Justin 
 
 (DEFSTRUCT (person
             (:print-function print-person))
-  (parent1 NIL) ; a symbol or string or NIL
-  (parent2 NIL) ; a symbol or string or NIL
-  (name NIL))   ; a symbol or string or NIL
+  (parent1 NIL)  ; a symbol or string or NIL
+  (parent2 NIL)  ; a symbol or string or NIL
+  (children NIL) ; a list or NIL
+  (name NIL))    ; a symbol or string or NIL
 
 
 (DEFUN print-person (item stream depth)
   "A helper function for Lispworks to be able to show you what is
 in a person structure concisely."
     (DECLARE (IGNORE depth))
-    (FORMAT stream "#<P name:~S p1:~S p2:~S>"
-            (person-name item) (person-parent1 item) (person-parent2 item))
+    (FORMAT stream "#<P name:~S p1:~S p2:~S ch:~S>"
+            (person-name item) (person-parent1 item) (person-parent2 item) (person-children item))
     item)
 
 
@@ -91,12 +65,16 @@ the hashtable in TREE with the key in NAME."
     (setf (gethash name tree) struct)
        name)
 
+
 ;;This function needs to be defined by your team.
 (DEFUN ancestorsb (name tree)
   "A helper function for the ANCESTORS function. 
 Returns a list of names (strings or symbols) of all the ancestors of NAME in TREE. 
 Does not remove any duplicated names! Does not sort names! Does not check if NAME 
 exists as a person in the TREE!"
+
+;if person is not in the tree, it returns NIL
+
   (LET* ((p (lookup-person name tree))
          (parent1 (person-parent1 p))
          (parent2 (person-parent2 p)))
@@ -111,8 +89,32 @@ exists as a person in the TREE!"
 ;;NOTE: This function needs to be defined by team   
 (DEFUN handle-E (linelist tree)
   "LINELIST is a LIST of strings. TREE is a hash-table."
-  (LET ()
-  ;;body of function goes here
+  (LET (
+         (parent1 (nth 0 linelist))
+         (parent2 (nth 1 linelist))
+         (child (nth 2 linelist))
+        )
+
+    ;if the parents do not exist, create them
+    (if (not (lookup-person parent1 tree))
+      (add-person parent1 (make-person :name parent1 :parent1 nil :parent2 nil :children nil) tree))
+    (if (not (lookup-person parent2 tree))
+      (add-person parent2 (make-person :name parent2 :parent1 nil :parent2 nil :children nil) tree)) 
+
+    ;check to see if there is a <name3> in E <name1> <name2> <name3>
+    (when (eql (list-length linelist) 3)
+      ;if the child does not exist, create the child
+      (if (not (lookup-person child tree))
+          (add-person child (make-person :name child :parent1 nil :parent2 nil :children nil) tree)) 
+
+       ;add parent1 and parent2 to children's parents
+      (setf (person-parent1 (lookup-person child tree)) parent1)
+      (setf (person-parent2 (lookup-person child tree)) parent2)
+
+      ;add child to parent1 and parent2's children
+      (setf (person-children (lookup-person parent1 tree)) (remove-duplicates(append (person-children (lookup-person parent1 tree)) (list child))))
+      (setf (person-children (lookup-person parent2 tree)) (remove-duplicates(append (person-children (lookup-person parent2 tree)) (list child)))) 
+    )
 
   ))
 
@@ -120,10 +122,48 @@ exists as a person in the TREE!"
 ;;NOTE: This function needs to be defined by team
 (DEFUN handle-X (linelist tree)
   "LINELIST is a LIST of strings. TREE is a hash-table."
-  (LET ()
-    ;;body of function goes here
+  (LET (
+        (name1 (lookup-person (nth 0 linelist) tree))
+        (relation (nth 1 linelist))
+        (name2 (if (string= (nth 1 linelist) "cousin")
+                  (lookup-person (nth 3 linelist) tree)
+               (lookup-person (nth 2 linelist) tree)))
+        )
 
-    ))
+    (if (or (eql name1 nil) (eql name2 nil) ) 
+         (RETURN-FROM handle-X nil)
+       )
+    
+    (when (string= relation "child")
+        (setf list (person-children name2) )
+        (if (member (nth 0 linelist) list :test #'STRING= )
+            (format t "~%~a" "Yes")
+            (format t "~%~a" "No") 
+        )
+    )
+
+    (when (string= relation "sibling")
+       (print "Here")
+
+    )
+
+    (when (string= relation "ancestor")
+        (setf list (sort (ancestors (nth 2 linelist) tree)#'string-lessp))
+        (if (member (nth 0 linelist) list :test #'STRING= )
+            (format t "~%~a" "Yes")
+            (format t "~%~a" "No") 
+        )
+     ) 
+
+    ;(when (string= relation "cousin")
+    ;    (print "Here")
+    ;    )
+    ;(when (string= relation "unrelated")
+    ;    (print "Here")
+    ;    )
+
+
+   ))
 
 
 ;;NOTE: This function needs to be defined by team
@@ -147,17 +187,21 @@ exists as a person in the TREE!"
 (DEFUN family (stream)
   "This is the top-level function for the whole Lisp program. Reads
 each line from the file opened in STREAM."
+  
   (LET ((tree (MAKE-HASH-TABLE :size 1000 :test #'equal))
         (line-items (SPLIT-SEQUENCE " " (READ-LINE stream nil "") :test #'equal)))
+ 
   (LOOP
-    (CASE (FIRST line-items)
-      ("E" (handle-E (REST line-items) tree))
-      ("W" (handle-W (REST line-items) tree))
-      ("X" (handle-X (REST line-items) tree))
-      (t (RETURN nil))) ; end of file reached
-    (SETF line-items (SPLIT-SEQUENCE " " (READ-LINE stream nil "") :test #'equal)))
-  )
-)
+   (CASE (FIRST line-items)
+     ("E" (handle-E (REST line-items) tree))
+     ("W" (handle-W (REST line-items) tree))
+     ("X" (handle-X (REST line-items) tree))
+     (t (RETURN NIL))) ; end of file reached
+   (SETF line-items (SPLIT-SEQUENCE " " (READ-LINE stream nil "") :test #'equal)))
+
+   *(loop for value being the hash-values of tree
+        do (print value))
+))
 
 
 ;;How Dr. Klassner and Jenish will test your code in the Listener:
@@ -172,28 +216,46 @@ each line from the file opened in STREAM."
 ;;;A helpful tester function for debugging your tree.
 (DEFUN test-tree ()
   (LET ((tree (MAKE-HASH-TABLE :size 1000 :test #'equal)))
-    (add-person "Zebulon" (make-person :name "Zebulon" :parent1 nil :parent2 nil) tree)
-    (add-person "Zenobia" (make-person :name "Zenobia" :parent1 nil :parent2 nil) tree)
-    (add-person "Fred" (make-person :name "Fred" :parent1 nil :parent2 nil) tree)
-    (add-person "Mary" (make-person :name "Mary" :parent1 "Zebulon" :parent2 "Zenobia") tree)
-    (add-person "Karen" (make-person :name "Karen" :parent1 "Fred" :parent2 "Mary") tree)
-    (add-person "Kelly" (make-person :name "Kelly" :parent1 "Fred" :parent2 "Mary") tree)
-    (add-person "Brenda" (make-person :name "Brenda" :parent1 "Fred" :parent2 "Mary") tree)
-    (add-person "Bill" (make-person :name "Bill" :parent1 nil :parent2 nil) tree)
-    (add-person "Benjamin" (make-person :name "Benjamin" :parent1 "Karen" :parent2 "Bill") tree)
-    (add-person "Alex" (make-person :name "Alex" :parent1 "Karen" :parent2 "Bill") tree)
-    ;; if "add-person" is defined correctly and "ancestorsb" is defined correctly,
-    ;; this last call should make test-tree return a list containing the following
-    ;; in some arbitrary order when you call test-tree in the Listener:
-    ;;   ("Karen" "Bill" "Fred" "Mary" "Zebulon" "Zenobia")
-    (ancestors "Alex" tree)
-
-    ;(print (person-exists "Alex" tree))
-    ;(print (person-parent1 (gethash "Alex" tree)))
-   
-    ;(print (lookup-person "Fred" tree))
+    
+    ;this is how you sort a response 
+    ;(sort(ancestors "Alex" tree)#'string-lessp)
+    ;(add-children "ZZZ" (gethash "J" tree))
+    ;(print (person-children (gethash "J" tree)))
 
     ;(SETF p (make-person :name "Barbara" :parent1 "Fred" :parent2 "Carol"))
     ;(print (person-parent1 p))
+
+    ;(linelist tree)
+
+    (setf input "Jamie Beth Will")
+    (setf line-items (SPLIT-SEQUENCE " " input))
+    (handle-E line-items tree)
+
+    (setf input "Will Barb Mark")
+    (setf line-items (SPLIT-SEQUENCE " " input))
+    (handle-E line-items tree)
+   
+    (setf input "Mark Margaret")
+    (setf line-items (SPLIT-SEQUENCE " " input))
+    (handle-E line-items tree)
+
+    (setf input2 "Mary Mark Justin")
+    (setf line-items2 (SPLIT-SEQUENCE " " input2))
+    (handle-E line-items2 tree)
+
+    (setf query "Margaret ancestor Justin")
+    (setf line-items (SPLIT-SEQUENCE " " query))
+    (handle-X line-items tree)
+    
+    (setf query "Mark child Will")
+    (setf line-items (SPLIT-SEQUENCE " " query))
+    (handle-X line-items tree)
+    
+    ;print the keys of a hash table
+    ;*(loop for key being the hash-keys of tree
+    ;    do (print key))
+
+    ;*(loop for value being the hash-values of tree
+    ;    do (print value))
 
 ))
