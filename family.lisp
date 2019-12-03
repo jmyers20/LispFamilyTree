@@ -1,5 +1,5 @@
 ;;;; -*- Mode: Lisp; -*- 
-;;;; Team Members: Justin 
+;;;; Team Members: Solomon, Yeryn, and Justin 
 
 (DEFSTRUCT (person
             (:print-function print-person))
@@ -7,7 +7,6 @@
   (parent2 NIL)  ; a symbol or string or NIL
   (children NIL) ; a list or NIL
   (name NIL))    ; a symbol or string or NIL
-
 
 (DEFUN print-person (item stream depth)
   "A helper function for Lispworks to be able to show you what is
@@ -17,7 +16,6 @@ in a person structure concisely."
             (person-name item) (person-parent1 item) (person-parent2 item) (person-children item))
     item)
 
-
 ;;;NOTE: This function is complete. No need to change it.
 (DEFUN lookup-person (name tree)
   "Returns a PERSON structure corresponding to the key NAME in the hashtable TREE.
@@ -25,14 +23,12 @@ NAME must be a STRING or a SYMBOL. If there is no one in the tree with the name
 in NAME, returns NIL."
   (GETHASH name tree nil))
 
-
 ;;;NOTE: This function is complete. No need to change it.
 (DEFUN person-exists (name tree)
   "Returns T when the key NAME has an actual person struct stored in TREE.
 Returns NIL (false) otherwise."
   (WHEN (lookup-person name tree)
     t))
-
 
 ;;;NOTE: This function is complete. No need to change it.
 (DEFUN ancestors (name tree)
@@ -45,12 +41,6 @@ to see whether all the arguments are of the correct types."
     (ERROR "ANCESTORS called with TREE (~A) that is not a HASH-TABLE." tree))
   (WHEN (person-exists name tree)
     (ancestorsb name tree)))
-
-
-;;;------------------------------------------------
-;;; TEAM SHOULD PUT ALL NEW HELPER FUNCTION
-;;; DEFINITIONS BELOW THIS COMMENT
-;;;------------------------------------------------ 
 
 (DEFUN add-person (name struct tree)
   "This should enter the person structure in STRUCT into
@@ -65,15 +55,11 @@ the hashtable in TREE with the key in NAME."
     (setf (gethash name tree) struct)
        name)
 
-
-;;This function needs to be defined by your team.
 (DEFUN ancestorsb (name tree)
   "A helper function for the ANCESTORS function. 
 Returns a list of names (strings or symbols) of all the ancestors of NAME in TREE. 
 Does not remove any duplicated names! Does not sort names! Does not check if NAME 
 exists as a person in the TREE!"
-
-;if person is not in the tree, it returns NIL
 
   (LET* ((p (lookup-person name tree))
          (parent1 (person-parent1 p))
@@ -85,8 +71,32 @@ exists as a person in the TREE!"
               (ancestorsb parent2 tree)))
   ))
 
+(DEFUN getSibling (name tree)
+;unsorted
+  
+  (let ( 
+        (person (lookup-person name tree))
+        )
 
-;;NOTE: This function needs to be defined by team   
+    ;check if name exists in tree
+    (if (not (person-exists name tree))
+        (RETURN-FROM getSibling NIL)
+      )
+
+    (if (string= (person-parent1 person) NIL)
+        (RETURN-FROM getSibling NIL)
+      (progn
+        (setf result (union
+          (loop for child in (person-children (lookup-person (person-parent1 person) tree))
+            collect child)
+          (loop for child in (person-children (lookup-person (person-parent2 person) tree))
+            collect child)))
+        (remove name result :test #'STRING= )
+      )
+    )
+  )
+)
+ 
 (DEFUN handle-E (linelist tree)
   "LINELIST is a LIST of strings. TREE is a hash-table."
   (LET (
@@ -118,7 +128,6 @@ exists as a person in the TREE!"
 
   ))
 
-
 ;;NOTE: This function needs to be defined by team
 (DEFUN handle-X (linelist tree)
   "LINELIST is a LIST of strings. TREE is a hash-table."
@@ -130,8 +139,8 @@ exists as a person in the TREE!"
                (lookup-person (nth 2 linelist) tree)))
         )
 
-    (if (or (eql name1 nil) (eql name2 nil) ) 
-         (RETURN-FROM handle-X nil)
+    (if (or (string= name1 nil) (string= name2 nil) ) 
+         (RETURN-FROM handle-X "No")
        )
     
     (when (string= relation "child")
@@ -243,14 +252,29 @@ each line from the file opened in STREAM."
     (setf line-items2 (SPLIT-SEQUENCE " " input2))
     (handle-E line-items2 tree)
 
-    (setf query "Margaret ancestor Justin")
-    (setf line-items (SPLIT-SEQUENCE " " query))
-    (handle-X line-items tree)
+    (setf input2 "Mary Mark Jennifer")
+    (setf line-items2 (SPLIT-SEQUENCE " " input2))
+    (handle-E line-items2 tree)
+
+    (setf input2 "Mary Mark Matthew")
+    (setf line-items2 (SPLIT-SEQUENCE " " input2))
+    (handle-E line-items2 tree)
+
+    ;(setf query "Margaret ancestor Justin")
+    ;(setf line-items (SPLIT-SEQUENCE " " query))
+    ;(handle-X line-items tree)
+
+    ;(setf query "BillyBob ancestor Justin")
+    ;(print query)
+    ;(setf line-items (SPLIT-SEQUENCE " " query))
+    ;(handle-X line-items tree)
     
-    (setf query "Mark child Will")
-    (setf line-items (SPLIT-SEQUENCE " " query))
-    (handle-X line-items tree)
-    
+    ;(setf query "Mark child Will")
+    ;(setf line-items (SPLIT-SEQUENCE " " query))
+    ;(handle-X line-items tree)
+
+    ;(print (getSibling "zzz" tree))
+    ;(print (ancestors "zzz" tree))
     ;print the keys of a hash table
     ;*(loop for key being the hash-keys of tree
     ;    do (print key))
