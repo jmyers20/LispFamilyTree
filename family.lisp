@@ -1,5 +1,5 @@
 ;;;; -*- Mode: Lisp; -*- 
-;;;; Team Members: Solomon, Yeryn, and Justin 
+;;;; Team Members: Solomon, Rina, and Justin 
 
 (DEFSTRUCT (person
             (:print-function print-person))
@@ -66,10 +66,46 @@ exists as a person in the TREE!"
          (parent2 (person-parent2 p)))
 
     (when parent1
-      (append (list parent1 parent2)
+      (remove-duplicates (append (list parent1 parent2)
               (ancestorsb parent1 tree)
-              (ancestorsb parent2 tree)))
+              (ancestorsb parent2 tree)) :test #'equal))
   ))
+
+(DEFUN descendants (name tree)
+  "Returns a list of names (strings or symbols) of all the ancestors of NAME in TREE. 
+Does not remove any duplicated names! Does not sort names! Does dynamic type checking
+to see whether all the arguments are of the correct types."
+  (WHEN (NOT (OR (SYMBOLP name) (STRINGP name)))
+    (ERROR "DESCENDANTS called with NAME (~A) that is not a SYMBOL or STRING." name))
+  (WHEN (NOT (HASH-TABLE-P tree))
+    (ERROR "DESCENDANTS called with TREE (~A) that is not a HASH-TABLE." tree))
+  (WHEN (person-exists name tree)
+    (descendantsb name tree)))
+
+(DEFUN descendantsb (name tree)
+  "A helper function for the DESCENDANTS function. 
+Returns a list of names (strings or symbols) of all the descendants of NAME in TREE. 
+Does not remove any duplicated names! Does not sort names! Does not check if NAME 
+exists as a person in the TREE!"
+
+  (LET* ((p (lookup-person name tree)) 
+         (children (person-children p))
+         (desc (list)) )
+
+    ;children is a list
+    ;parse through list and get children of each person in the list
+
+    (when children
+      (setf desc (append desc children))
+      (loop for x in children 
+            do
+            (setf desc (append desc (descendantsb x tree)))
+      )
+    )
+    (remove-duplicates desc :test #'equal)
+
+  ))
+
 
 (DEFUN getSibling (name tree)
 ;unsorted
@@ -131,6 +167,9 @@ exists as a person in the TREE!"
 ;;NOTE: This function needs to be defined by team
 (DEFUN handle-X (linelist tree)
   "LINELIST is a LIST of strings. TREE is a hash-table."
+
+  (format t "~%X ~{~a ~}" linelist)
+
   (LET (
         (name1 (lookup-person (nth 0 linelist) tree))
         (relation (nth 1 linelist))
@@ -138,29 +177,28 @@ exists as a person in the TREE!"
                   (lookup-person (nth 3 linelist) tree)
                (lookup-person (nth 2 linelist) tree)))
         )
-
-    (if (or (string= name1 nil) (string= name2 nil) ) 
-         (RETURN-FROM handle-X "No")
-       )
-    
+   
     (when (string= relation "child")
         (setf list (person-children name2) )
         (if (member (nth 0 linelist) list :test #'STRING= )
-            (format t "~%~a" "Yes")
-            (format t "~%~a" "No") 
+            (format t "~%~a~%" "Yes")
+            (format t "~%~a~%" "No") 
         )
-    )
+     )
 
     (when (string= relation "sibling")
-       (print "Here")
-
-    )
+       (setf list (getsibling (nth 2 linelist) tree))
+       (if (member (nth 0 linelist) list :test #'STRING= )
+            (format t "~%~a~%" "Yes")
+            (format t "~%~a~%" "No") 
+       )
+     )
 
     (when (string= relation "ancestor")
         (setf list (sort (ancestors (nth 2 linelist) tree)#'string-lessp))
         (if (member (nth 0 linelist) list :test #'STRING= )
-            (format t "~%~a" "Yes")
-            (format t "~%~a" "No") 
+            (format t "~%~a~%" "Yes")
+            (format t "~%~a~%" "No") 
         )
      ) 
 
@@ -178,8 +216,47 @@ exists as a person in the TREE!"
 ;;NOTE: This function needs to be defined by team
 (DEFUN handle-W (linelist tree)
   "LINELIST is a LIST of strings. TREE is a hash-table."
-  (LET ()
-    ;;body of function goes here
+
+  (format t "~%W ~{~a ~}" linelist)
+
+  (LET (
+        (relation (nth 0 linelist))
+        (name1 (if (string= (nth 0 linelist) "cousin")
+                  (lookup-person (nth 2 linelist) tree)
+               (lookup-person (nth 1 linelist) tree)))
+        )
+
+    (when (string= relation "child")
+        (setf list (person-children name1))
+        (if (eql list nil)
+            (format t "~%None ~%")
+            (format t "~%~{~a~%~} " (remove name1 (sort list #'string-lessp)))
+         )
+     )
+
+     (when (string= relation "sibling")
+        (setf list (getsibling (nth 1 linelist) tree))
+        (if (eql list nil)
+            (format t "~%None ~%")
+            (format t "~%~{~a~%~} " (remove name1 (sort list #'string-lessp)))
+         )
+      )
+
+     (when (string= relation "ancestor")
+        (setf list (ancestors (nth 1 linelist) tree))
+        (if (eql list nil)
+            (format t "~%None ~%")
+            (format t "~%~{~a~%~} " (remove name1 (sort list #'string-lessp)))
+         )
+      )
+
+      ;(when (string= relation "cousin")
+      ;    (print "Here")
+      ;    )
+      ;(when (string= relation "unrelated")
+      ;    (print "Here")
+      ;    )
+
 
     ))
 
@@ -187,9 +264,6 @@ exists as a person in the TREE!"
 ;;; TEAM SHOULD PUT ALL NEW HELPER FUNCTION
 ;;; DEFINITIONS ABOVE THIS COMMENT
 ;;;------------------------------------------------ 
-
-
-
 
 ;;;THE TOP LEVEL FUNCTION OF THE WHOLE PROGRAM
 ;;NOTE: This function is complete.
@@ -199,17 +273,20 @@ each line from the file opened in STREAM."
   
   (LET ((tree (MAKE-HASH-TABLE :size 1000 :test #'equal))
         (line-items (SPLIT-SEQUENCE " " (READ-LINE stream nil "") :test #'equal)))
- 
+
   (LOOP
-   (CASE (FIRST line-items)
-     ("E" (handle-E (REST line-items) tree))
-     ("W" (handle-W (REST line-items) tree))
-     ("X" (handle-X (REST line-items) tree))
-     (t (RETURN NIL))) ; end of file reached
+   (COND 
+    ((string= (first line-items) "E")
+     (handle-E (REST line-items) tree))
+    ((string= (first line-items) "X")
+     (handle-X (REST line-items) tree))
+    ((string= (first line-items) "W")
+     (handle-W (REST line-items) tree))
+    (t (return nil)) ) ;end of file reached
    (SETF line-items (SPLIT-SEQUENCE " " (READ-LINE stream nil "") :test #'equal)))
 
-   *(loop for value being the hash-values of tree
-        do (print value))
+  ;*(loop for value being the hash-values of tree
+  ;      do (print value))
 ))
 
 
@@ -234,8 +311,6 @@ each line from the file opened in STREAM."
     ;(SETF p (make-person :name "Barbara" :parent1 "Fred" :parent2 "Carol"))
     ;(print (person-parent1 p))
 
-    ;(linelist tree)
-
     (setf input "Jamie Beth Will")
     (setf line-items (SPLIT-SEQUENCE " " input))
     (handle-E line-items tree)
@@ -245,6 +320,10 @@ each line from the file opened in STREAM."
     (handle-E line-items tree)
    
     (setf input "Mark Margaret")
+    (setf line-items (SPLIT-SEQUENCE " " input))
+    (handle-E line-items tree)
+
+    (setf input "Mark Margaret Paul")
     (setf line-items (SPLIT-SEQUENCE " " input))
     (handle-E line-items tree)
 
@@ -260,21 +339,36 @@ each line from the file opened in STREAM."
     (setf line-items2 (SPLIT-SEQUENCE " " input2))
     (handle-E line-items2 tree)
 
-    ;(setf query "Margaret ancestor Justin")
-    ;(setf line-items (SPLIT-SEQUENCE " " query))
-    ;(handle-X line-items tree)
+    (setf input2 "Matthew Peyton Lily")
+    (setf line-items2 (SPLIT-SEQUENCE " " input2))
+    (handle-E line-items2 tree)
 
-    ;(setf query "BillyBob ancestor Justin")
-    ;(print query)
-    ;(setf line-items (SPLIT-SEQUENCE " " query))
-    ;(handle-X line-items tree)
+    (setf query "Mary ancestor Justin")
+    (setf line-items (SPLIT-SEQUENCE " " query))
+    (handle-X line-items tree)
     
-    ;(setf query "Mark child Will")
-    ;(setf line-items (SPLIT-SEQUENCE " " query))
-    ;(handle-X line-items tree)
+    (setf query "Justin sibling Matthew")
+    (setf line-items (SPLIT-SEQUENCE " " query))
+    (handle-X line-items tree)
 
-    ;(print (getSibling "zzz" tree))
-    ;(print (ancestors "zzz" tree))
+    (setf query "child Justin")
+    (setf line-items (SPLIT-SEQUENCE " " query))
+    (handle-W line-items tree)
+
+    (setf query "child Mark")
+    (setf line-items (SPLIT-SEQUENCE " " query))
+    (handle-W line-items tree)
+
+    (setf query "sibling Matthew")
+    (setf line-items (SPLIT-SEQUENCE " " query))
+    (handle-W line-items tree)
+
+    (setf query "ancestor Matthew")
+    (setf line-items (SPLIT-SEQUENCE " " query))
+    (handle-W line-items tree)
+
+    (print (descendants "Mark" tree))
+
     ;print the keys of a hash table
     ;*(loop for key being the hash-keys of tree
     ;    do (print key))
