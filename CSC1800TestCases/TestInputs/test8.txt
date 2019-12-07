@@ -210,7 +210,5 @@ E Dirhael Ivorwen Gilraen
 E Arathorn2 Gilraen Aragorn
 E Aragorn Arwen Eldarion
 X Arwen cousin Aragorn
-W ancestor Elrond
 W child Arahad2
 W ancestor Aragost
-X Aragost unrelated Aravon

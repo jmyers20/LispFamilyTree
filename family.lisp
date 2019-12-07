@@ -66,10 +66,56 @@ the hashtable in TREE with the key in NAME."
               (ancestorsb parent2 tree) ))
   ))
 
+
+(DEFUN ancestorsOnLevel (name tree number)
+  "A helper function for the COUSINS function. 
+Returns a list of names (strings or symbols) of the ancestors of NAME in TREE on a certain level. Does not sort names! Does not check if NAME exists as a person in the TREE!"
+
+  (when (>= number -1)
+      (LET* ((p (lookup-person name tree))
+             (parent1 (person-parent1 p))
+             (parent2 (person-parent2 p))
+             (ancestorList (list)) )    
+
+      (if (= number -1)
+        (push name ancestorList))
+
+      (when parent1
+        (setf ancestorList 
+              (append ancestorList 
+                      (ancestorsOnlevel parent1 tree (- number 1))
+                      (ancestorsOnlevel parent2 tree (- number 1)) )))
+      (sort ancestorList #'string-lessp )
+    )
+ ))
+
+(DEFUN ancestorsUpToLevel (name tree number)
+  "Returns a list of names of all the ancestors 
+up to a level of NAME in TREE. Does not sort names! 
+Does not check if NAME exists as a person in the TREE!"
+
+  (when (>= number 0)
+      (LET* ((p (lookup-person name tree))
+             (parent1 (person-parent1 p))
+             (parent2 (person-parent2 p))
+             (ancestorList (list)) )    
+     
+      (push name ancestorList)
+
+      (when parent1
+        (setf ancestorList 
+              (append ancestorList 
+                      (ancestorsUpTolevel parent1 tree (- number 1))
+                      (ancestorsUpTolevel parent2 tree (- number 1)) )))
+        (sort ancestorList #'string-lessp )
+      )
+ ))
+
 (DEFUN descendants (name tree)
-  "Returns a list of names (strings or symbols) of all the ancestors of NAME in TREE. 
+  "Returns a list of names of all the ancestors of NAME in TREE. 
 Does not remove any duplicated names! Does not sort names! Does dynamic type checking
 to see whether all the arguments are of the correct types."
+
   (WHEN (NOT (OR (SYMBOLP name) (STRINGP name)))
     (ERROR "DESCENDANTS called with NAME (~A) that is not a SYMBOL or STRING." name))
   (WHEN (NOT (HASH-TABLE-P tree))
@@ -79,9 +125,8 @@ to see whether all the arguments are of the correct types."
 
 (DEFUN descendantsb (name tree)
   "A helper function for the DESCENDANTS function. 
-Returns a list of names (strings or symbols) of all the descendants of NAME in TREE. 
-Does not remove any duplicated names! Does not sort names! Does not check if NAME 
-exists as a person in the TREE!"
+Returns a list of names of all the descendants of NAME in TREE. 
+Does not sort names! Does not check if NAME exists as a person in the TREE!"
 
   (LET* ((p (lookup-person name tree)) 
          (children (person-children p))
@@ -101,11 +146,34 @@ exists as a person in the TREE!"
 
   ))
 
+(DEFUN descendantsOnLevel (name tree number)
+ "Returns a list of names  of all the descendants on 
+a certain level of NAME in TREE.
+Does not check if NAME exists as a person in the TREE!"
+
+  (when (>= number -1)
+    (LET* ((p (lookup-person name tree)) 
+         (children (person-children p))
+         (desc (list)) )
+
+      (if (= number -1)
+          (push name desc))
+
+      (when children
+        (loop for x in children 
+            do
+            (setf desc (append desc (descendantsOnLevel x tree (- number 1))))
+         )
+      )
+      (sort desc #'string-lessp )
+    )
+  )
+
+)
 
 (DEFUN getSibling (name tree)
-;unsorted
   
-  (let ( 
+  (LET ( 
         (person (lookup-person name tree))
         )
 
@@ -126,6 +194,64 @@ exists as a person in the TREE!"
       )
     )
   )
+)
+
+(DEFUN getCousins (name tree level)
+  (LET ((ancestors (ancestorsOnLevel name tree level))
+        (cousins (list))
+        (siblings (getSibling name tree))
+       )
+
+    (loop for x in ancestors 
+          do
+          (setq cousins (append cousins (descendantsOnLevel x tree level)))
+       )
+
+    ;need to remove duplicates, siblings, and name from cousins list
+    (setf cousins (remove-duplicates cousins :test #'equal))
+    (setf cousins (remove name cousins :test #'STRING= ))
+    (loop for x in siblings
+          do
+          (setf cousins (remove x cousins :test #'STRING= ))
+       )
+    cousins
+
+    )
+  )
+
+(DEFUN isUnrelated (name1 name2 tree)
+  (setf result "Yes")
+
+        ;check if they are siblings
+        (setf siblings (sort (getsibling name2 tree)#'string-lessp))
+        (if (member name1 siblings :test #'STRING=)
+            (setf result "No"))
+
+        ;check if name1 and name2 share a common ancestor
+        (setf ancestors1 (ancestors name1 tree))
+        (setf ancestors2 (ancestors name2 tree))
+        (loop for person in ancestors1
+             do
+            (if (member person ancestors2)
+              (setf result "No")
+           )
+         )
+        
+        ;get decendants of name1 and check for name2
+        (setf descendants1 (sort (descendants name1 tree)#'string-lessp))
+        (if (member name2 descendants1 :test #'STRING=)
+            (setf result "No"))
+
+        ;get decendants of name2 and check for name1
+        (setf descendants2 (sort (descendants name2 tree)#'string-lessp))
+        (if (member name1 descendants2 :test #'STRING=)
+            (setf result "No"))
+
+        ;print result
+        (if (string= result "No")
+            (RETURN-FROM isUnrelated "No")
+            (RETURN-FROM isUnrelated "Yes")
+         )
 )
  
 (DEFUN handle-E (linelist tree)
@@ -198,38 +324,11 @@ exists as a person in the TREE!"
      ) 
 
     (when (string= relation "unrelated")
-        (setf result "Yes")
-
-        ;check if they are siblings
-        (setf siblings (sort (getsibling (nth 2 linelist) tree)#'string-lessp))
-        (if (member (nth 0 linelist) siblings :test #'STRING=)
-            (setf result "No"))
-
-        ;check if name1 and name2 share a common ancestor
-        (setf ancestors1 (ancestors (nth 0 linelist) tree))
-        (setf ancestors2 (ancestors (nth 2 linelist) tree))
-        (loop for person in ancestors1
-             do
-            (if (member person ancestors2)
-              (setf result "No")
-           )
-         )
-        
-        ;get decendants of name1 and check for name2
-        (setf descendants1 (sort (descendants (nth 0 linelist) tree)#'string-lessp))
-        (if (member (nth 2 linelist) descendants1 :test #'STRING=)
-            (setf result "No"))
-
-        ;get decendants of name2 and check for name1
-        (setf descendants2 (sort (descendants (nth 2 linelist) tree)#'string-lessp))
-        (if (member (nth 0 linelist) descendants2 :test #'STRING=)
-            (setf result "No"))
-
-        ;print result
-        (if (string= result "No")
+        (setf result (isUnrelated (nth 0 linelist) (nth 2 linelist) tree))
+        (if (string= result "No" )
             (format t "~%~a~%" "No")
             (format t "~%~a~%" "Yes") 
-         )
+        )
      )
 
      ;(when (string= relation "cousin")
@@ -277,39 +376,28 @@ exists as a person in the TREE!"
          )
       )
 
-      ;(when (string= relation "cousin")
-      ;    (print "Here")
-      ;    )
+     (when (string= relation "cousin")
+         (print "Here")
+         ;(getCousins (nth 2 linelist) (nth 1 linelist) tree)
+     )
      
 
-      ;if two people have no common ancestor
-      ;AND neither is the direct ancestor of the other, then they are unrelated.
       (when (string= relation "unrelated")
-           (setf ancestors (sort (ancestors (nth 1 linelist) tree)#'string-lessp))
-           (setf descendants (sort (descendants (nth 1 linelist) tree)#'string-lessp))
-           (setf siblings (sort (getsibling (nth 1 linelist) tree)#'string-lessp))
-           (setf list (append ancestors descendants siblings))
-           ;list is all related people to name1
-           
-           (let ( (unrelated (list)) 
-                 )
-             (loop for key being the hash-key of tree
-                  do 
-                  ;if value is not in the list of related people, add to the list of unrelated
-                  (if (not (member key list :test #'STRING= ) )
-                    (print key)
-                   )   
-             )
-           )
+          (setf unrelated (list))
+          (loop for key being the hash-keys of tree
+                        do
+                        (setf result (isUnrelated (nth 1 linelist) key tree))
+                        (if (string= result "Yes")
+                            (push key unrelated)
+                         )
+            )
 
-
-           ;(if (eql list nil)
-           ; (format t "~%None ~%")
-           ; (format t "~%~{~a~%~} " (remove name1 (sort list #'string-lessp)))
-           ;)
+            (if (eql unrelated nil)
+                (format t "~%None ~%")
+                (format t "~%~{~a~%~} " (remove name1 (sort unrelated #'string-lessp)))
+             )          
        )
-
-
+            
     ))
 
 ;;;THE TOP LEVEL FUNCTION OF THE WHOLE PROGRAM
@@ -352,6 +440,18 @@ each line from the file opened in STREAM."
     (handle-E line-items tree)
 
     (setf input "Will Barb Mark")
+    (setf line-items (SPLIT-SEQUENCE " " input))
+    (handle-E line-items tree)
+
+    (setf input "Will Barb Jason")
+    (setf line-items (SPLIT-SEQUENCE " " input))
+    (handle-E line-items tree)
+
+    (setf input "Jason Angie Zach")
+    (setf line-items (SPLIT-SEQUENCE " " input))
+    (handle-E line-items tree)
+
+    (setf input "Jason Angie Cole")
     (setf line-items (SPLIT-SEQUENCE " " input))
     (handle-E line-items tree)
    
@@ -403,10 +503,6 @@ each line from the file opened in STREAM."
     (setf line-items (SPLIT-SEQUENCE " " query))
     (handle-W line-items tree)
 
-    (setf query "Justin unrelated Peyton")
-    (setf line-items (SPLIT-SEQUENCE " " query))
-    (handle-X line-items tree)
-
     (setf query "Justin sibling Justin")
     (setf line-items (SPLIT-SEQUENCE " " query))
     (handle-X line-items tree)
@@ -414,6 +510,28 @@ each line from the file opened in STREAM."
     (setf query "unrelated Justin")
     (setf line-items (SPLIT-SEQUENCE " " query))
     (handle-W line-items tree)
+
+    (setf query "Justin unrelated Lily")
+    (setf line-items (SPLIT-SEQUENCE " " query))
+    (handle-X line-items tree)
+
+    (setf query "Mark unrelated Will")
+    (setf line-items (SPLIT-SEQUENCE " " query))
+    (handle-X line-items tree)
+    
+    ;(setf ancestors1  (sort (ancestorsOnLevel "Mark" tree 1) #'string-lessp ))
+    ;(print ancestors1)
+
+    ;(print (ancestorsOnLevel "Lily" tree 3))
+    ;(print (ancestorsUpToLevel "Lily" tree 3))
+
+    ;(descendantsOnLevel "Jamie" tree 1)
+
+    (getCousins "Zach" tree 1)
+
+    ;(print "here")
+
+    ;(setf descendants1 (sort (descendants "Mark" tree)#'string-lessp))
 
     ;print the keys of a hash table
     ;*(loop for key being the hash-keys of tree
